@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPSO Compliance Report Generator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>FPSO Compliance Report Generator</h1>
+    <p class="subtitle">AI-powered SOLAS / IMO compliance reports from watch logs</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Operational Log</h2>
+        <div class="panel-actions">
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="en">English</option>
+            <option value="pt">Português</option>
+          </select>
+          <button id="loadSample" type="button">Load sample</button>
+        </div>
+      </div>
+
+      <form id="logForm">
+        <div class="grid">
+          <div class="field">
+            <label for="vessel_name">Vessel Name</label>
+            <input id="vessel_name" name="vessel_name" required>
+          </div>
+          <div class="field">
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" required>
+          </div>
+          <div class="field">
+            <label for="watch_start">Watch Start</label>
+            <input id="watch_start" name="watch_start" type="time" required>
+          </div>
+          <div class="field">
+            <label for="watch_end">Watch End</label>
+            <input id="watch_end" name="watch_end" type="time" required>
+          </div>
+          <div class="field">
+            <label for="chief_officer">Chief Officer</label>
+            <input id="chief_officer" name="chief_officer" required>
+          </div>
+          <div class="field">
+            <label for="fuel_oil_quantity">Fuel Oil Quantity</label>
+            <input id="fuel_oil_quantity" name="fuel_oil_quantity" placeholder="e.g. 2450 tons">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="operational_summary">Operational Summary</label>
+          <textarea id="operational_summary" name="operational_summary" rows="3" required></textarea>
+        </div>
+
+        <div class="field">
+          <label for="equipment_status">Equipment Status (JSON)</label>
+          <textarea id="equipment_status" name="equipment_status" rows="4" placeholder='{"separator": "operational", "power_generation": "operational"}'></textarea>
+        </div>
+
+        <div class="field">
+          <label for="maintenance_performed">Maintenance Performed (one item per line)</label>
+          <textarea id="maintenance_performed" name="maintenance_performed" rows="3"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="incidents">Incidents</label>
+          <textarea id="incidents" name="incidents" rows="2"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="weather_conditions">Weather Conditions</label>
+          <input id="weather_conditions" name="weather_conditions">
+        </div>
+
+        <div class="field">
+          <label for="remarks">Remarks</label>
+          <textarea id="remarks" name="remarks" rows="2"></textarea>
+        </div>
+
+        <button type="submit" id="generateBtn">Generate Compliance Report</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Report</h2>
+      <div id="status" class="status"></div>
+      <div id="report" class="report"></div>
+    </section>
+  </main>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
