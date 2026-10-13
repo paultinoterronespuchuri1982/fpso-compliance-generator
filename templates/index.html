@@ -1,19 +1,24 @@
 <!DOCTYPE html>
+<!-- Página principal: formulário do registro operacional à esquerda e relatório à direita.
+     Os scripts e estilos vêm da pasta static/, servida pelo FastAPI. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FPSO Compliance Report Generator</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="app">
+  <!-- Cabeçalho com título e descrição da aplicação -->
   <header>
     <h1>FPSO Compliance Report Generator</h1>
     <p class="subtitle">AI-powered SOLAS / IMO compliance reports from watch logs</p>
   </header>
 
   <main>
+    <!-- Painel esquerdo: formulário do registro operacional -->
     <section class="panel">
       <div class="panel-header">
         <h2>Operational Log</h2>
@@ -28,6 +33,7 @@
       </div>
 
       <form id="logForm">
+        <!-- Campos principais do turno em grade de duas colunas -->
         <div class="grid">
           <div class="field">
             <label for="vessel_name">Vessel Name</label>
@@ -55,6 +61,7 @@
           </div>
         </div>
 
+        <!-- Campos de texto livre (resumo, equipamentos em JSON, manutenção, incidentes, etc.) -->
         <div class="field">
           <label for="operational_summary">Operational Summary</label>
           <textarea id="operational_summary" name="operational_summary" rows="3" required></textarea>
@@ -85,10 +92,12 @@
           <textarea id="remarks" name="remarks" rows="2"></textarea>
         </div>
 
+        <!-- Botão que dispara o envio do formulário (tratado em static/app.js) -->
         <button type="submit" id="generateBtn">Generate Compliance Report</button>
       </form>
     </section>
 
+    <!-- Painel direito: status da operação e relatório gerado -->
     <section class="panel">
       <h2>Report</h2>
       <div id="status" class="status"></div>
@@ -97,6 +106,7 @@
   </main>
 </div>
 
+<!-- Lógica da interface, carregada no final para o HTML já estar pronto -->
 <script src="/static/app.js"></script>
 </body>
 </html>

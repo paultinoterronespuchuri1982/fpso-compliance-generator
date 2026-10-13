@@ -1,3 +1,8 @@
+// Lógica da interface: lê o formulário, chama a API e mostra o relatório.
+// Segurança: o relatório é exibido com textContent (nunca innerHTML), então nenhum texto
+// vindo do modelo ou do usuário é interpretado como HTML (evita XSS).
+
+// Referências aos elementos da página, buscados uma única vez.
 const form = document.getElementById("logForm");
 const statusEl = document.getElementById("status");
 const reportEl = document.getElementById("report");
@@ -5,11 +10,13 @@ const generateBtn = document.getElementById("generateBtn");
 const loadSampleBtn = document.getElementById("loadSample");
 const languageSelect = document.getElementById("language");
 
+// Mostra uma mensagem de status. `kind` pode ser "ok" ou "err" para mudar a cor.
 function setStatus(message, kind) {
   statusEl.textContent = message;
   statusEl.className = "status" + (kind ? " " + kind : "");
 }
 
+// Preenche o formulário com um registro de exemplo (ou vazio, se campos estiverem ausentes).
 function fillForm(sample) {
   document.getElementById("vessel_name").value = sample.vessel_name || "";
   document.getElementById("date").value = sample.date || "";
@@ -18,15 +25,18 @@ function fillForm(sample) {
   document.getElementById("chief_officer").value = sample.chief_officer || "";
   document.getElementById("fuel_oil_quantity").value = sample.fuel_oil_quantity || "";
   document.getElementById("operational_summary").value = sample.operational_summary || "";
+  // Objetos viram JSON legível no campo; ausentes ficam vazios.
   document.getElementById("equipment_status").value = sample.equipment_status
     ? JSON.stringify(sample.equipment_status, null, 2)
     : "";
+  // Lista vira um item por linha.
   document.getElementById("maintenance_performed").value = (sample.maintenance_performed || []).join("\n");
   document.getElementById("incidents").value = sample.incidents || "";
   document.getElementById("weather_conditions").value = sample.weather_conditions || "";
   document.getElementById("remarks").value = sample.remarks || "";
 }
 
+// Carrega o exemplo do servidor. `async` permite usar `await` para esperar a resposta sem travar a página.
 loadSampleBtn.addEventListener("click", async () => {
   try {
     setStatus("Loading sample logs…");
@@ -40,15 +50,33 @@ loadSampleBtn.addEventListener("click", async () => {
   }
 });
 
+// Converte o texto do campo "Equipment Status" em objeto. Lança erro se não for um objeto JSON.
 function parseEquipmentStatus(raw) {
   if (!raw.trim()) return {};
+  let parsed;
   try {
-    return JSON.parse(raw);
+    parsed = JSON.parse(raw);
   } catch (err) {
     throw new Error("Equipment Status must be valid JSON");
   }
+  // Arrays e valores soltos (ex.: números) não são aceitos; o backend espera um objeto.
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Equipment Status must be a JSON object");
+  }
+  return parsed;
 }
 
+// Gera a mensagem de erro a partir da resposta do servidor.
+// O FastAPI devolve `detail` como texto (erros gerais) ou como lista (erros de validação).
+function errorMessageFrom(data) {
+  if (!data || !data.detail) return "Failed to generate report";
+  if (Array.isArray(data.detail)) {
+    return data.detail.map((item) => item.msg).join("; ");
+  }
+  return data.detail;
+}
+
+// Desenha as seções do relatório. Cada conteúdo é inserido com textContent, por segurança.
 function renderReport(report) {
   reportEl.innerHTML = "";
 
@@ -63,12 +91,14 @@ function renderReport(report) {
   ];
 
   for (const [title, content] of sections) {
+    // Pula seções vazias.
     if (content === undefined || content === null || content === "") continue;
 
     const heading = document.createElement("h3");
     heading.textContent = title;
     reportEl.appendChild(heading);
 
+    // Listas viram <ul>; textos viram <p>.
     if (Array.isArray(content)) {
       const ul = document.createElement("ul");
       for (const item of content) {
@@ -85,7 +115,9 @@ function renderReport(report) {
   }
 }
 
+// Ao enviar o formulário: valida, chama /api/generate-report e mostra o resultado ou o erro.
 form.addEventListener("submit", async (e) => {
+  // Impede o recarregamento da página padrão do formulário.
   e.preventDefault();
   reportEl.innerHTML = "";
 
@@ -97,6 +129,7 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  // Monta o corpo da requisição no formato esperado pelo ReportRequest do backend.
   const payload = {
     logs: {
       date: document.getElementById("date").value,
@@ -119,6 +152,7 @@ form.addEventListener("submit", async (e) => {
     language: languageSelect.value,
   };
 
+  // Desabilita o botão enquanto espera, evitando envios duplicados.
   generateBtn.disabled = true;
   setStatus("Generating compliance report…");
 
@@ -129,14 +163,16 @@ form.addEventListener("submit", async (e) => {
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Failed to generate report");
+    // Se o servidor devolver algo que não é JSON (ex.: erro interno), usamos um objeto vazio.
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(errorMessageFrom(data));
 
     renderReport(data.report);
     setStatus(`Report generated for ${data.vessel_name} at ${new Date(data.generated_at).toLocaleString()}`, "ok");
   } catch (err) {
     setStatus(err.message, "err");
   } finally {
+    // Executa sempre, com sucesso ou erro, para reabilitar o botão.
     generateBtn.disabled = false;
   }
 });

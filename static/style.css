@@ -1,3 +1,6 @@
+/* Estilos da interface. Cores definidas como variáveis em :root para facilitar troca de tema. */
+
+/* Variáveis de cor e tema escuro */
 :root {
   --bg: #0f172a;
   --panel: #1e293b;
@@ -10,8 +13,10 @@
   --err: #f87171;
 }
 
+/* Reset: box-sizing inclui padding e borda na largura dos elementos */
 * { box-sizing: border-box; }
 
+/* Base da página */
 body {
   margin: 0;
   background: var(--bg);
@@ -19,22 +24,27 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Container central com largura máxima */
 .app { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
 
+/* Cabeçalho */
 header { margin-bottom: 24px; }
 header h1 { margin: 0 0 4px; font-size: 1.6rem; }
 .subtitle { color: var(--muted); margin: 0; }
 
+/* Layout em duas colunas (formulário e relatório) */
 main {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   gap: 20px;
 }
 
+/* Em telas pequenas as colunas empilham */
 @media (max-width: 860px) {
   main { grid-template-columns: 1fr; }
 }
 
+/* Cartão de painel */
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -42,6 +52,7 @@ main {
   padding: 18px 20px;
 }
 
+/* Cabeçalho do painel com título e ações */
 .panel-header {
   display: flex;
   align-items: center;
@@ -54,6 +65,7 @@ main {
 .panel-actions { display: flex; align-items: center; gap: 8px; }
 .panel-actions label { color: var(--muted); font-size: 0.85rem; }
 
+/* Grade de campos em duas colunas (uma coluna no celular) */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -64,9 +76,11 @@ main {
   .grid { grid-template-columns: 1fr; }
 }
 
+/* Campo: rótulo acima do controle */
 .field { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
 label { font-size: 0.85rem; color: var(--muted); }
 
+/* Estilo comum dos campos de entrada */
 input, textarea, select {
   background: #0b1220;
   border: 1px solid var(--border);
@@ -79,11 +93,13 @@ input, textarea, select {
 
 textarea { resize: vertical; }
 
+/* Destaque da borda ao focar um campo */
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--accent);
 }
 
+/* Botões */
 button {
   background: var(--accent-strong);
   color: #06202c;
@@ -97,6 +113,7 @@ button {
 button:hover { background: var(--accent); }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* Botão secundário (carregar exemplo) com aparência de contorno */
 #loadSample {
   background: transparent;
   color: var(--accent);
@@ -105,10 +122,12 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   font-weight: 500;
 }
 
+/* Mensagem de status com cor de sucesso ou erro */
 .status { min-height: 20px; margin-bottom: 8px; font-size: 0.9rem; }
 .status.ok { color: var(--ok); }
 .status.err { color: var(--err); }
 
+/* Seções do relatório gerado */
 .report h3 { margin: 16px 0 6px; font-size: 1rem; color: var(--accent); }
 .report h3:first-child { margin-top: 0; }
 .report p { margin: 0 0 8px; line-height: 1.5; color: var(--text); }
