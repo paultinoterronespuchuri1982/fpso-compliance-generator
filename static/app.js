@@ -1,3 +1,15 @@
+/**
+ * Front-end logic for the compliance report page.
+ *
+ * Responsibilities:
+ *   - Load sample logs into the form (POST /api/sample-logs).
+ *   - Collect the form into a ReportRequest and submit it
+ *     (POST /api/generate-report).
+ *   - Render the returned report sections into the page.
+ *
+ * Relies on element IDs defined in templates/index.html.
+ */
+
 const form = document.getElementById("logForm");
 const statusEl = document.getElementById("status");
 const reportEl = document.getElementById("report");
@@ -5,11 +17,24 @@ const generateBtn = document.getElementById("generateBtn");
 const loadSampleBtn = document.getElementById("loadSample");
 const languageSelect = document.getElementById("language");
 
+/**
+ * Show a status message below the form.
+ *
+ * @param {string} message - Text to display.
+ * @param {"ok"|"err"} [kind] - Optional style: "ok" for success, "err" for errors.
+ */
 function setStatus(message, kind) {
   statusEl.textContent = message;
   statusEl.className = "status" + (kind ? " " + kind : "");
 }
 
+/**
+ * Fill the form fields with a sample log.
+ * Missing values are replaced with empty strings. Equipment status is
+ * shown as pretty-printed JSON and maintenance tasks as one per line.
+ *
+ * @param {object} sample - Object returned by POST /api/sample-logs.
+ */
 function fillForm(sample) {
   document.getElementById("vessel_name").value = sample.vessel_name || "";
   document.getElementById("date").value = sample.date || "";
@@ -27,6 +52,7 @@ function fillForm(sample) {
   document.getElementById("remarks").value = sample.remarks || "";
 }
 
+// "Load sample" button: fetch sample data and fill the form with it.
 loadSampleBtn.addEventListener("click", async () => {
   try {
     setStatus("Loading sample logs…");
@@ -40,6 +66,14 @@ loadSampleBtn.addEventListener("click", async () => {
   }
 });
 
+/**
+ * Parse the equipment status textarea as JSON.
+ * An empty field is treated as an empty object.
+ *
+ * @param {string} raw - Text from the equipment status textarea.
+ * @returns {object} The parsed equipment status.
+ * @throws {Error} If the text is not valid JSON.
+ */
 function parseEquipmentStatus(raw) {
   if (!raw.trim()) return {};
   try {
@@ -49,6 +83,13 @@ function parseEquipmentStatus(raw) {
   }
 }
 
+/**
+ * Render the report sections into the report container.
+ * Sections with empty values are skipped. Array values (such as the
+ * compliance checklist) become bullet lists; other values become paragraphs.
+ *
+ * @param {object} report - The `report` object from the API response.
+ */
 function renderReport(report) {
   reportEl.innerHTML = "";
 
@@ -85,6 +126,12 @@ function renderReport(report) {
   }
 }
 
+/**
+ * Submit handler for the log form.
+ * Builds the request body from the form fields, calls the API, and
+ * renders the report or shows the error. The button is disabled while
+ * the request is in flight.
+ */
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   reportEl.innerHTML = "";
@@ -97,6 +144,8 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  // Request body matching the ReportRequest model in main.py.
+  // Field names must match the OperationalLog model exactly.
   const payload = {
     logs: {
       date: document.getElementById("date").value,
@@ -123,6 +172,7 @@ form.addEventListener("submit", async (e) => {
   setStatus("Generating compliance report…");
 
   try {
+    // POST the JSON body. On error, the server sends { "detail": "..." }.
     const res = await fetch("/api/generate-report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -1,3 +1,18 @@
+"""
+FPSO Compliance Report Generator.
+
+FastAPI backend that turns FPSO watch logs into structured SOLAS/IMO
+compliance reports using the Anthropic Claude API. It serves a small
+web UI (templates/index.html, static/) and exposes a JSON API:
+
+    GET  /health                  Service health check
+    POST /api/sample-logs         Returns a sample operational log
+    POST /api/generate-report     Generates a compliance report from a log
+
+Configuration is read from environment variables (see .env.example);
+the required variable is ANTHROPIC_API_KEY.
+"""
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -29,11 +44,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Anthropic client
+# Anthropic API client. Reads ANTHROPIC_API_KEY from the environment.
 client = Anthropic()
 
 # Models
 class OperationalLog(BaseModel):
+    """
+    One watch (shift) record for an FPSO.
+
+    Attributes:
+        date: Date of the watch (e.g. "2024-09-21").
+        vessel_name: Name of the vessel.
+        watch_start: Watch start time (HH:MM).
+        watch_end: Watch end time (HH:MM).
+        chief_officer: Name of the officer on watch.
+        operational_summary: Free-text summary of operations.
+        equipment_status: Map of equipment name to its status.
+        incidents: Incidents or anomalies; empty if none.
+        maintenance_performed: List of maintenance tasks completed.
+        fuel_oil_quantity: Fuel oil on board, as free text.
+        weather_conditions: Sea state, wind and visibility.
+        remarks: Any additional remarks.
+    """
     date: str
     vessel_name: str
     watch_start: str
@@ -48,11 +80,28 @@ class OperationalLog(BaseModel):
     remarks: str = ""
 
 class ReportRequest(BaseModel):
+    """
+    Body of POST /api/generate-report.
+
+    Attributes:
+        logs: The watch record to report on.
+        language: Output language, "en" or "pt". Defaults to "en".
+        format: Requested output format. Currently only "json" is used.
+    """
     logs: OperationalLog
     language: str = "en"
     format: str = "json"
 
 class ReportResponse(BaseModel):
+    """
+    Response of POST /api/generate-report.
+
+    Attributes:
+        status: "success" when the report was generated.
+        report: Structured report sections returned by Claude.
+        generated_at: ISO 8601 timestamp of generation time.
+        vessel_name: Vessel the report belongs to.
+    """
     status: str
     report: dict
     generated_at: str
@@ -60,6 +109,20 @@ class ReportResponse(BaseModel):
 
 # Compliance prompt template
 def get_compliance_prompt(logs: OperationalLog, language: str) -> str:
+    """
+    Build the prompt sent to Claude for a compliance report.
+
+    The prompt includes the vessel and watch data, the report sections
+    required, and the exact JSON keys Claude must return.
+
+    Args:
+        logs: The watch record to report on.
+        language: "en" or "pt". Unknown values fall back to English
+            for the section titles.
+
+    Returns:
+        The complete prompt text.
+    """
     lang_dict = {
         "en": {
             "title": "SOLAS/IMO Compliance Report",
@@ -135,7 +198,21 @@ Generate the report now:"""
 
 
 def extract_json(text: str) -> dict:
-    """Parse a JSON object out of a Claude response, tolerating markdown code fences."""
+    """
+    Parse a JSON object from a Claude response.
+
+    Claude sometimes wraps its JSON in a markdown code fence. If a fence
+    is present, only its contents are parsed; otherwise the whole text is.
+
+    Args:
+        text: Raw text returned by the model.
+
+    Returns:
+        The parsed JSON object.
+
+    Raises:
+        json.JSONDecodeError: If the text is not valid JSON.
+    """
     fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.DOTALL)
     candidate = fenced.group(1) if fenced else text.strip()
     return json.loads(candidate)
@@ -159,7 +236,26 @@ async def health_check():
 
 @app.post("/api/generate-report", response_model=ReportResponse)
 async def generate_report(request: ReportRequest):
-    """Generate compliance report from operational logs"""
+    """
+    Generate a SOLAS/IMO compliance report from an operational log.
+
+    Steps:
+        1. Check that ANTHROPIC_API_KEY is set.
+        2. Check that the language is "en" or "pt".
+        3. Build the prompt and call Claude.
+        4. Parse the JSON reply. If parsing fails, the raw text is
+           returned in the executive_summary field so no output is lost.
+
+    Args:
+        request: Validated ReportRequest body.
+
+    Returns:
+        ReportResponse with the structured report.
+
+    Raises:
+        HTTPException 400: Language is not "en" or "pt".
+        HTTPException 500: API key missing or the Claude call failed.
+    """
 
     try:
         # Validate API key
@@ -217,7 +313,12 @@ async def generate_report(request: ReportRequest):
 
 @app.post("/api/sample-logs")
 async def get_sample_logs():
-    """Get sample FPSO operational logs for testing"""
+    """
+    Return a sample operational log for testing the UI and API.
+
+    Returns:
+        A dict matching the OperationalLog schema.
+    """
     sample = {
         "date": "2024-09-21",
         "vessel_name": "FPSO Santos",
@@ -245,6 +346,7 @@ async def get_sample_logs():
     }
     return sample
 
+# Serve static assets (app.js, style.css) at /static.
 try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except Exception:
