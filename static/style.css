@@ -1,17 +1,26 @@
+/*
+ * Styles for the compliance report page.
+ * Dark theme. Colors are defined as CSS variables in :root so they can
+ * be changed in one place.
+ */
+
+/* Color palette (dark theme). */
 :root {
-  --bg: #0f172a;
-  --panel: #1e293b;
-  --border: #334155;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --accent: #38bdf8;
-  --accent-strong: #0ea5e9;
-  --ok: #22c55e;
-  --err: #f87171;
+  --bg: #0f172a;            /* page background */
+  --panel: #1e293b;         /* panel background */
+  --border: #334155;        /* borders and dividers */
+  --text: #e2e8f0;          /* main text */
+  --muted: #94a3b8;         /* labels and secondary text */
+  --accent: #38bdf8;        /* headings, focus, hover */
+  --accent-strong: #0ea5e9; /* primary button */
+  --ok: #22c55e;            /* success message */
+  --err: #f87171;           /* error message */
 }
 
+/* Include padding and border in element sizes, so widths stay predictable. */
 * { box-sizing: border-box; }
 
+/* Base page style. */
 body {
   margin: 0;
   background: var(--bg);
@@ -19,22 +28,27 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Centered content column with a maximum width. */
 .app { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
 
+/* Page header with title and subtitle. */
 header { margin-bottom: 24px; }
 header h1 { margin: 0 0 4px; font-size: 1.6rem; }
 .subtitle { color: var(--muted); margin: 0; }
 
+/* Two columns: form (wider) and report. */
 main {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   gap: 20px;
 }
 
+/* On narrow screens, stack the panels in one column. */
 @media (max-width: 860px) {
   main { grid-template-columns: 1fr; }
 }
 
+/* Card-style container for each panel. */
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -42,6 +56,7 @@ main {
   padding: 18px 20px;
 }
 
+/* Panel title row with the language selector and sample button. */
 .panel-header {
   display: flex;
   align-items: center;
@@ -51,22 +66,27 @@ main {
   margin-bottom: 12px;
 }
 
+/* Controls on the right of the panel header. */
 .panel-actions { display: flex; align-items: center; gap: 8px; }
 .panel-actions label { color: var(--muted); font-size: 0.85rem; }
 
+/* Two-column grid for short form fields. */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
+/* Single column on small screens. */
 @media (max-width: 560px) {
   .grid { grid-template-columns: 1fr; }
 }
 
+/* One form field: label above its input. */
 .field { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
 label { font-size: 0.85rem; color: var(--muted); }
 
+/* Shared look for inputs, text areas and the language selector. */
 input, textarea, select {
   background: #0b1220;
   border: 1px solid var(--border);
@@ -77,13 +97,16 @@ input, textarea, select {
   font-family: inherit;
 }
 
+/* Text areas can be resized vertically only. */
 textarea { resize: vertical; }
 
+/* Focus ring: change the border color instead of the browser outline. */
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--accent);
 }
 
+/* Primary button (used for the submit button). */
 button {
   background: var(--accent-strong);
   color: #06202c;
@@ -97,6 +120,7 @@ button {
 button:hover { background: var(--accent); }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* "Load sample" is a secondary button: outline style, no fill. */
 #loadSample {
   background: transparent;
   color: var(--accent);
@@ -105,15 +129,19 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   font-weight: 500;
 }
 
+/* Status line. Colored by the .ok or .err class set in app.js. */
 .status { min-height: 20px; margin-bottom: 8px; font-size: 0.9rem; }
 .status.ok { color: var(--ok); }
 .status.err { color: var(--err); }
 
+/* Report sections. Styles match the elements app.js creates. */
 .report h3 { margin: 16px 0 6px; font-size: 1rem; color: var(--accent); }
 .report h3:first-child { margin-top: 0; }
 .report p { margin: 0 0 8px; line-height: 1.5; color: var(--text); }
 .report ul { margin: 0 0 8px; padding-left: 20px; }
 .report li { margin-bottom: 4px; }
+
+/* Preformatted text block, kept for raw output. */
 .report pre {
   white-space: pre-wrap;
   background: #0b1220;

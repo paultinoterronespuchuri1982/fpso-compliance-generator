@@ -10,12 +10,13 @@
  * Relies on element IDs defined in templates/index.html.
  */
 
-const form = document.getElementById("logForm");
-const statusEl = document.getElementById("status");
-const reportEl = document.getElementById("report");
-const generateBtn = document.getElementById("generateBtn");
-const loadSampleBtn = document.getElementById("loadSample");
-const languageSelect = document.getElementById("language");
+// References to page elements, looked up once at load time.
+const form = document.getElementById("logForm");              // Log form
+const statusEl = document.getElementById("status");           // Status message line
+const reportEl = document.getElementById("report");           // Report output area
+const generateBtn = document.getElementById("generateBtn");   // Submit button
+const loadSampleBtn = document.getElementById("loadSample");  // "Load sample" button
+const languageSelect = document.getElementById("language");   // Report language select
 
 /**
  * Show a status message below the form.
@@ -36,6 +37,7 @@ function setStatus(message, kind) {
  * @param {object} sample - Object returned by POST /api/sample-logs.
  */
 function fillForm(sample) {
+  // Each field uses "|| ''" so missing values do not become "undefined".
   document.getElementById("vessel_name").value = sample.vessel_name || "";
   document.getElementById("date").value = sample.date || "";
   document.getElementById("watch_start").value = sample.watch_start || "";
@@ -43,9 +45,11 @@ function fillForm(sample) {
   document.getElementById("chief_officer").value = sample.chief_officer || "";
   document.getElementById("fuel_oil_quantity").value = sample.fuel_oil_quantity || "";
   document.getElementById("operational_summary").value = sample.operational_summary || "";
+  // The equipment object is shown as indented JSON so it can be edited.
   document.getElementById("equipment_status").value = sample.equipment_status
     ? JSON.stringify(sample.equipment_status, null, 2)
     : "";
+  // The list is joined with newlines, one task per line, to match the textarea.
   document.getElementById("maintenance_performed").value = (sample.maintenance_performed || []).join("\n");
   document.getElementById("incidents").value = sample.incidents || "";
   document.getElementById("weather_conditions").value = sample.weather_conditions || "";
@@ -56,6 +60,7 @@ function fillForm(sample) {
 loadSampleBtn.addEventListener("click", async () => {
   try {
     setStatus("Loading sample logs…");
+    // Request the sample data from the server (no body is needed).
     const res = await fetch("/api/sample-logs", { method: "POST" });
     if (!res.ok) throw new Error("Failed to load sample logs");
     const sample = await res.json();
@@ -103,6 +108,9 @@ function renderReport(report) {
     ["Sign-off", report.sign_off_template],
   ];
 
+  // Build the DOM with createElement and textContent, not innerHTML. The
+  // report text comes from the model, so it is inserted as plain text to
+  // prevent HTML or script injection.
   for (const [title, content] of sections) {
     if (content === undefined || content === null || content === "") continue;
 
@@ -136,6 +144,8 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
   reportEl.innerHTML = "";
 
+  // Validate the equipment JSON before sending anything. On error, show the
+  // message and stop without calling the API.
   let equipment_status;
   try {
     equipment_status = parseEquipmentStatus(document.getElementById("equipment_status").value);
@@ -156,6 +166,7 @@ form.addEventListener("submit", async (e) => {
       operational_summary: document.getElementById("operational_summary").value,
       equipment_status,
       incidents: document.getElementById("incidents").value,
+      // One task per line becomes a list. Blank lines and spaces are removed.
       maintenance_performed: document
         .getElementById("maintenance_performed")
         .value.split("\n")
@@ -168,6 +179,7 @@ form.addEventListener("submit", async (e) => {
     language: languageSelect.value,
   };
 
+  // Disable the button while the request runs to prevent duplicate submissions.
   generateBtn.disabled = true;
   setStatus("Generating compliance report…");
 
@@ -179,14 +191,19 @@ form.addEventListener("submit", async (e) => {
       body: JSON.stringify(payload),
     });
 
+    // Read the body even on error, because FastAPI sends error details as JSON.
     const data = await res.json();
+    // A non-2xx status is an error. Use the server's message when it has one.
     if (!res.ok) throw new Error(data.detail || "Failed to generate report");
 
+    // Show the report and a confirmation line with vessel and local time.
     renderReport(data.report);
     setStatus(`Report generated for ${data.vessel_name} at ${new Date(data.generated_at).toLocaleString()}`, "ok");
   } catch (err) {
+    // Network failures and server errors both end here.
     setStatus(err.message, "err");
   } finally {
+    // Runs on success and on error, so the button is always re-enabled.
     generateBtn.disabled = false;
   }
 });

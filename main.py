@@ -25,17 +25,22 @@ import re
 from datetime import datetime
 from anthropic import Anthropic
 
-# Load environment variables
+# Load variables from a local .env file into the process environment.
+# Must run before anything reads ANTHROPIC_API_KEY.
 load_dotenv()
 
-# Initialize FastAPI app
+# Create the FastAPI application. Title, description and version appear
+# in the auto-generated API docs at /docs.
 app = FastAPI(
     title="FPSO Compliance Report Generator",
     description="AI-powered compliance reports for FPSO operations",
     version="1.0.0"
 )
 
-# Add CORS middleware
+# CORS (Cross-Origin Resource Sharing) middleware.
+# Allows browsers on any origin to call this API. This is convenient for
+# local development but should be restricted to known origins before
+# deployment.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -220,12 +225,26 @@ def extract_json(text: str) -> dict:
 
 @app.get("/")
 async def root():
-    """Root endpoint - serves frontend"""
+    """
+    Serve the web interface.
+
+    Returns:
+        The HTML page at templates/index.html.
+    """
+    # Path is relative to the working directory, so run the app from the
+    # project root.
     return FileResponse("templates/index.html")
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """
+    Report service status.
+
+    Returns:
+        A dict with the service name, whether the API key is set
+        ("configured" or "missing"), and the current timestamp.
+        This does not check that the key is valid.
+    """
     api_key = os.getenv("ANTHROPIC_API_KEY")
     return {
         "status": "ok",
@@ -234,6 +253,8 @@ async def health_check():
         "timestamp": datetime.now().isoformat()
     }
 
+# POST: the request carries a body, and the server creates a report from it.
+# response_model validates the response against ReportResponse.
 @app.post("/api/generate-report", response_model=ReportResponse)
 async def generate_report(request: ReportRequest):
     """
@@ -267,10 +288,12 @@ async def generate_report(request: ReportRequest):
         if request.language not in ["en", "pt"]:
             raise HTTPException(status_code=400, detail="Language must be 'en' or 'pt'")
 
-        # Build prompt
+        # Build the prompt from the watch data and the requested language.
         prompt = get_compliance_prompt(request.logs, request.language)
 
-        # Call Claude API
+        # Send the prompt to Claude. max_tokens caps the reply length, so a
+        # very long reply is cut off rather than run on. Each request is
+        # independent: no conversation history is kept.
         message = client.messages.create(
             model="claude-opus-5",
             max_tokens=2000,
@@ -282,13 +305,17 @@ async def generate_report(request: ReportRequest):
             ]
         )
 
-        # Extract response
+        # The reply is a list of content blocks. The first block holds the
+        # text of the answer.
         response_text = message.content[0].text
 
-        # Parse JSON response
+        # Convert the text into a dict. If the model did not return valid
+        # JSON, fall back to the sections below so the raw text is kept.
         try:
             report_data = extract_json(response_text)
         except json.JSONDecodeError:
+            # Fallback: put the whole reply in the summary and mark the other
+            # sections, so the output is not lost when parsing fails.
             report_data = {
                 "executive_summary": response_text,
                 "equipment_status": "See summary",
@@ -299,6 +326,7 @@ async def generate_report(request: ReportRequest):
                 "sign_off_template": "Prepared by: _____ Date: _____ Signature: _____"
             }
 
+        # Success: return the report with metadata for the caller.
         return ReportResponse(
             status="success",
             report=report_data,
@@ -307,10 +335,15 @@ async def generate_report(request: ReportRequest):
         )
 
     except HTTPException:
+        # Already an HTTP error with a status code: re-raise it unchanged.
         raise
     except Exception as e:
+        # Anything else (for example, an API call failure) becomes a 500.
+        # Note: the message exposes internal error text to the client.
         raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
 
+# Declared as POST for compatibility with app.js. Semantically this is a
+# read, so GET would be the more standard choice.
 @app.post("/api/sample-logs")
 async def get_sample_logs():
     """
@@ -319,6 +352,8 @@ async def get_sample_logs():
     Returns:
         A dict matching the OperationalLog schema.
     """
+    # Fixed example data for the UI and API tests. Values match the
+    # OperationalLog schema.
     sample = {
         "date": "2024-09-21",
         "vessel_name": "FPSO Santos",
@@ -352,6 +387,9 @@ try:
 except Exception:
     pass
 
+# Direct execution (python main.py): start the server with uvicorn.
+# host 0.0.0.0 listens on all network interfaces. Use 127.0.0.1 to
+# restrict access to this machine.
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

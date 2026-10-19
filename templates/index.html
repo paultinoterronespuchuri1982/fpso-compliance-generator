@@ -1,12 +1,25 @@
+<!--
+  Main page of the FPSO Compliance Report Generator.
+
+  Two panels:
+    1. Operational Log: the form that collects one watch record.
+    2. Report: status line and the generated report sections.
+
+  Element IDs are used by static/app.js. Do not rename them without
+  updating app.js. Styles live in static/style.css.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Character encoding and responsive layout (mobile width). -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FPSO Compliance Report Generator</title>
+<!-- Stylesheet served by FastAPI from the /static mount. -->
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<!-- Page wrapper, limits the content width. -->
 <div class="app">
   <header>
     <h1>FPSO Compliance Report Generator</h1>
@@ -14,20 +27,25 @@
   </header>
 
   <main>
+    <!-- Left panel: the watch log form. -->
     <section class="panel">
       <div class="panel-header">
         <h2>Operational Log</h2>
         <div class="panel-actions">
+          <!-- Report language, sent as "language" in the request. -->
           <label for="language">Language</label>
           <select id="language">
             <option value="en">English</option>
             <option value="pt">Português</option>
           </select>
+          <!-- Fills the form with sample data from /api/sample-logs. -->
           <button id="loadSample" type="button">Load sample</button>
         </div>
       </div>
 
+      <!-- Submit is handled in app.js. The browser's required-field check runs first. -->
       <form id="logForm">
+        <!-- Two-column grid for short fields. -->
         <div class="grid">
           <div class="field">
             <label for="vessel_name">Vessel Name</label>
@@ -55,16 +73,19 @@
           </div>
         </div>
 
+        <!-- Full-width fields below the grid. Multi-line text areas. -->
         <div class="field">
           <label for="operational_summary">Operational Summary</label>
           <textarea id="operational_summary" name="operational_summary" rows="3" required></textarea>
         </div>
 
+        <!-- Must be a JSON object. app.js validates it before sending. -->
         <div class="field">
           <label for="equipment_status">Equipment Status (JSON)</label>
           <textarea id="equipment_status" name="equipment_status" rows="4" placeholder='{"separator": "operational", "power_generation": "operational"}'></textarea>
         </div>
 
+        <!-- One task per line. app.js splits it into a list. -->
         <div class="field">
           <label for="maintenance_performed">Maintenance Performed (one item per line)</label>
           <textarea id="maintenance_performed" name="maintenance_performed" rows="3"></textarea>
@@ -85,18 +106,23 @@
           <textarea id="remarks" name="remarks" rows="2"></textarea>
         </div>
 
+        <!-- Starts the request. The button is disabled while it runs. -->
         <button type="submit" id="generateBtn">Generate Compliance Report</button>
       </form>
     </section>
 
+    <!-- Right panel: results. app.js fills #status and #report. -->
     <section class="panel">
       <h2>Report</h2>
+      <!-- Status line: progress, success, or error messages. -->
       <div id="status" class="status"></div>
+      <!-- Container for the generated report sections. -->
       <div id="report" class="report"></div>
     </section>
   </main>
 </div>
 
+<!-- Loaded last so the elements above exist when the script runs. -->
 <script src="/static/app.js"></script>
 </body>
 </html>
